@@ -1,12 +1,12 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * the License. You may obtain a copy of the License at
  * 
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +16,11 @@
  */
 package com.wikimore.mlog;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Hashtable;
-import java.util.Properties;
 
 /**
  * abstraction Log factory
@@ -33,16 +31,16 @@ import java.util.Properties;
  * @since 1.0
  */
 public abstract class LogFactory {
-    private static final String DEFAULT_FACTORY_CLASS = "com.wikimore.mlog.impl.DefaultLogFactory";
-    private static final String FACTORY_CLASS_KEY = "com.wikimore.mlog.LogFactory";
-    private static final String LOG_CLASS = "com.wikimore.mlog.Log";
-    private static final String MLOG_PROPERTIES_FILE = "mlog.properties";
+    protected static final String DEFAULT_FACTORY_CLASS = "com.wikimore.mlog.impl.DefaultLogFactory";
+    protected static final String FACTORY_CLASS_KEY = "com.wikimore.mlog.LogFactory";
+    protected static final String LOG_CLASS = "com.wikimore.mlog.Log";
+    protected static final String MLOG_PROPERTIES_FILE = "mlog.properties";
     protected static PrintStream diagnosticsStream = System.err;
     private static Hashtable<ClassLoader, LogFactory> cachedFactorys = new Hashtable<ClassLoader, LogFactory>(
             4);
     static {
         // load mlog.properties
-
+        loadAttributes();
     }
 
     /**
@@ -102,9 +100,13 @@ public abstract class LogFactory {
             return logFactory;
         }
         // 2. new LogFactory instance
-        final String factoryClass = System.getProperty(FACTORY_CLASS_KEY, DEFAULT_FACTORY_CLASS);
+        String factoryClass = System.getProperty(FACTORY_CLASS_KEY);
+        if (factoryClass == null) {
+            factoryClass = DEFAULT_FACTORY_CLASS;
+        }
         logFactory = newFactory(factoryClass, classLoader);
 
+        // 3. cache LogFactory
         if (logFactory != null) {
             cacheFactory(classLoader, logFactory);
         }
@@ -120,8 +122,9 @@ public abstract class LogFactory {
         });
         if (result instanceof LogInitException) {
             LogInitException ex = (LogInitException) result;
-            diagnosticsStream.println("An error occurred while loading the factory class:"
-                    + ex.getMessage());
+            diagnosticsStream
+                    .println("[ERROR] LogFactory: An error occurred while loading the factory class:"
+                            + ex.getMessage());
             throw ex;
         }
         return (LogFactory) result;
@@ -199,17 +202,22 @@ public abstract class LogFactory {
         });
     }
 
+    /**
+     * read mlog.properties file in classpath, load key-value pair
+     */
     private static void loadAttributes() {
         ClassLoader classLoader = getClassLoaderInternal();
         if (classLoader != null) {
-            Properties p = new Properties();
             InputStream in = classLoader.getResourceAsStream(MLOG_PROPERTIES_FILE);
             try {
-                p.load(in);
-            } catch (IOException e) {
+                System.getProperties().load(in);
+            } catch (Exception e) {
                 diagnosticsStream
-                        .println("[ERROR] LogFactory: could not load mlog.properties, use default configuration.");
+                        .println("[WARN] LogFactory: could not load mlog.properties, use default configuration.");
             }
+        } else {
+            diagnosticsStream
+                    .println("[ERROR] LogFactory: could not load mlog.properties, class loader is null, use default configuration.");
         }
     }
 }

@@ -80,7 +80,11 @@ public class LogFactoryTest {
         long u2 = e2 - b2;
         System.out.println(u2);
         System.out.println(u1);
-        Assert.assertNotNull(log);
+    }
 
+    @Test
+    public void testGetConfigLog() {
+        Log log = LogFactory.getLog("test");
+        System.out.println(log);
     }
 }

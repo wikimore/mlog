@@ -1,12 +1,12 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * the License. You may obtain a copy of the License at
  * 
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +17,6 @@
 package com.wikimore.mlog.impl;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Hashtable;
 
 import com.wikimore.mlog.Log;
@@ -35,7 +34,8 @@ public class DefaultLogFactory extends LogFactory {
     private static final String LOG4J_LOG = "com.wikimore.mlog.impl.Log4jLog";
     private static final String JDK_LOG = "com.wikimore.mlog.impl.JdkLog";
     private static final String CONSOLE_LOG = "com.wikimore.mlog.impl.ConsoleLog";
-    private static final String[] adapterClasses = { LOG4J_LOG, JDK_LOG, CONSOLE_LOG };
+    private static final String LOGBACK_LOG = "com.wikimore.mlog.impl.LogbackLog";
+    private static final String[] adapterClasses = { LOG4J_LOG, LOGBACK_LOG, JDK_LOG, CONSOLE_LOG };
     protected Hashtable<String, Log> instances = new Hashtable<String, Log>();
     protected Constructor<Log> logConstructor = null;
     protected Class<?> logConstructorSignature[] = { java.lang.String.class };
@@ -46,44 +46,44 @@ public class DefaultLogFactory extends LogFactory {
     }
 
     @Override
-    protected Log getInstance(String clazz) throws LogInitException {
-        // get Log from cache
-        Log log = instances.get(clazz);
+    protected Log getInstance(String logName) throws LogInitException {
+        // 1. get Log from cache
+        Log log = instances.get(logName);
         if (log != null) {
             return log;
         }
-        // create Log with constructor
-        log = fastCreateLog(clazz);
-        if (log == null) {
-            // create Log with class name
-            log = discoverSuitableLog(clazz);
+        // 2. fast create Log with className or constructor
+        log = fastCreateLog(logName);
+
+        if (log != null) {
+            return log;
         }
+        // 3. create Log with listed Log class name
+        log = discoverSuitableLog(logName);
+
         if (log != null) {
             // cache Log
-            instances.put(clazz, log);
+            instances.put(logName, log);
+        } else {
+            diagnosticsStream.println("[ERROR] LogFactory: initialize Log instance failed.");
+            throw new LogInitException("initialize Log instance failed");
         }
         return log;
     }
 
     private Log fastCreateLog(String logCategory) {
-        if (logConstructor == null) {
-            return null;
-        }
         Log log = null;
+        if (logConstructor == null) {
+            String logClassName = System.getProperty(LOG_CLASS);
+            if (logClassName != null) {
+                log = createLogFromClass(logClassName, logCategory, true);
+            }
+            return log;
+        }
         try {
             log = logConstructor.newInstance(logCategory);
-        } catch (IllegalArgumentException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        } catch (Exception e) {
+            // ignore
         }
         return log;
     }
@@ -105,34 +105,22 @@ public class DefaultLogFactory extends LogFactory {
         Object[] params = { logCategory };
         Constructor<Log> constructor = null;
         Log logAdapter = null;
-        ClassLoader currentCL = LogFactory.getClassLoaderInternal();
-        for (;;) {
+        ClassLoader classLoader = LogFactory.getClassLoaderInternal();
+        try {
+            Class<Log> c = null;
             try {
-                Class<Log> c = null;
-                try {
-                    c = (Class<Log>) Class.forName(logAdapterClassName, true, currentCL);
-                } catch (ClassNotFoundException e) {
-                }
-                constructor = c.getConstructor(logConstructorSignature);
-                Object o = constructor.newInstance(params);
-                if (o instanceof Log) {
-                    logAdapter = (Log) o;
-                    break;
-                }
-            } catch (NoClassDefFoundError e) {
-                break;
-            } catch (ExceptionInInitializerError e) {
-                break;
-            } catch (LogInitException e) {
-                throw e;
-            } catch (Throwable t) {
+                c = (Class<Log>) Class.forName(logAdapterClassName, true, classLoader);
+            } catch (ClassNotFoundException e) {
             }
-            if (currentCL == null) {
-                break;
+            constructor = c.getConstructor(logConstructorSignature);
+            Object o = constructor.newInstance(params);
+            if (o instanceof Log) {
+                logAdapter = (Log) o;
             }
+        } catch (Throwable t) {
+            // ignore
         }
         if ((logAdapter != null) && affectState) {
-            // We've succeeded, so set instance fields
             this.logConstructor = constructor;
         }
         return logAdapter;
