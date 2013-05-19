@@ -14,7 +14,17 @@ package com.wikimore.mlog;
 public class Formatter {
     public static final String PLACEHOLDER = "{}";
 
+    /**
+     * format pattern message with objects
+     * 
+     * @param pattern message which have {} mark
+     * @param objects
+     * @return
+     */
     public static String format(String pattern, Object... objects) {
+        if (objects == null || objects.length == 0) {
+            return pattern;
+        }
         StringBuilder stringBuilder = new StringBuilder();
         int index = 0;
         int start = 0;
