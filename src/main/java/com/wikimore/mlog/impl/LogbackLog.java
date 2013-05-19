@@ -14,33 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.wikimore.mlog;
+package com.wikimore.mlog.impl;
 
 /**
- * Wrapper exception when initializing Log
+ * Log implementation wrapper Logback log
  * 
- * @author ted created on 2013-5-17
- * @since 1.0
+ * @author ted created at 2013-5-19
+ * @version 1.0
  */
-public class LogInitException extends RuntimeException {
-
-	/**  */
-	private static final long serialVersionUID = -2231595628576980218L;
-
-	public LogInitException() {
-		super();
-	}
-
-	public LogInitException(String message, Throwable cause) {
-		super(message, cause);
-	}
-
-	public LogInitException(String message) {
-		super(message);
-	}
-
-	public LogInitException(Throwable cause) {
-		super(cause);
-	}
+public class LogbackLog {
 
 }

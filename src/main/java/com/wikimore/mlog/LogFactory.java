@@ -1,12 +1,28 @@
 /*
- * 文件名称: LogFactory.java Copyright 2011-2013 Nali All right reserved.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.wikimore.mlog;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Hashtable;
+import java.util.Properties;
 
 /**
  * abstraction Log factory
@@ -17,23 +33,56 @@ import java.util.Hashtable;
  * @since 1.0
  */
 public abstract class LogFactory {
-
     private static final String DEFAULT_FACTORY_CLASS = "com.wikimore.mlog.impl.DefaultLogFactory";
     private static final String FACTORY_CLASS_KEY = "com.wikimore.mlog.LogFactory";
+    private static final String LOG_CLASS = "com.wikimore.mlog.Log";
+    private static final String MLOG_PROPERTIES_FILE = "mlog.properties";
     protected static PrintStream diagnosticsStream = System.err;
     private static Hashtable<ClassLoader, LogFactory> cachedFactorys = new Hashtable<ClassLoader, LogFactory>(
             4);
+    static {
+        // load mlog.properties
 
-    public abstract Log getInstance(Class<?> clazz) throws LogInitException;
+    }
 
-    public abstract Log getInstance(String clazz) throws LogInitException;
+    /**
+     * internal method that get a Log instance with class name
+     * 
+     * @param clazz
+     * @return
+     * @throws LogInitException
+     */
+    protected abstract Log getInstance(Class<?> clazz) throws LogInitException;
 
+    /**
+     * internal method that get a Log instance with name
+     * 
+     * @param name
+     * @return
+     * @throws LogInitException
+     */
+    protected abstract Log getInstance(String name) throws LogInitException;
+
+    /**
+     * get a Log instance with name
+     * 
+     * @param name
+     * @return
+     * @throws LogInitException
+     */
     public static Log getLog(String name) throws LogInitException {
         return getFactory().getInstance(name);
     }
 
-    public static Log getLog(Class<?> name) throws LogInitException {
-        return getFactory().getInstance(name);
+    /**
+     * get a Log instance with class name
+     * 
+     * @param clazz
+     * @return
+     * @throws LogInitException
+     */
+    public static Log getLog(Class<?> clazz) throws LogInitException {
+        return getFactory().getInstance(clazz);
     }
 
     /**
@@ -148,5 +197,19 @@ public abstract class LogFactory {
                 return classLoader;
             }
         });
+    }
+
+    private static void loadAttributes() {
+        ClassLoader classLoader = getClassLoaderInternal();
+        if (classLoader != null) {
+            Properties p = new Properties();
+            InputStream in = classLoader.getResourceAsStream(MLOG_PROPERTIES_FILE);
+            try {
+                p.load(in);
+            } catch (IOException e) {
+                diagnosticsStream
+                        .println("[ERROR] LogFactory: could not load mlog.properties, use default configuration.");
+            }
+        }
     }
 }
