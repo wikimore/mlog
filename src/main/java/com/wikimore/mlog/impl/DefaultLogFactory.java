@@ -7,8 +7,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Hashtable;
 
-import org.apache.commons.logging.LogConfigurationException;
-
 import com.wikimore.mlog.Log;
 import com.wikimore.mlog.LogFactory;
 import com.wikimore.mlog.LogInitException;
@@ -112,7 +110,7 @@ public class DefaultLogFactory extends LogFactory {
                 break;
             } catch (ExceptionInInitializerError e) {
                 break;
-            } catch (LogConfigurationException e) {
+            } catch (LogInitException e) {
                 throw e;
             } catch (Throwable t) {
             }
